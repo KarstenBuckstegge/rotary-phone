@@ -1,10 +1,7 @@
-// Code based on tutorial by Lasse Marburg / machinaex.de
-// https://www.youtube.com/watch?v=KcvgQ9eWKDU
-
-int dialPin = 0; // Analog input used on arduino
 int signalStrength = 0; // Is reciever lifted or not
 int signalStrengthStat = 0;
 
+int dialPin = 0;
 int counter = 0;
 int dialedNumber = 10;
 
@@ -19,46 +16,47 @@ int signalThreshold = 400;
 bool dialing = false;
 bool hungUp = false;
 
+String finalNumber;
 
-void setup()
-{
-  Serial.begin(115200);
+void configurePhone(int pinDial) {
+  dialPin = pinDial;
+
   pinMode(dialPin, INPUT);
 }
 
-
-void loop() 
-{
-  if (analogRead(dialPin) > signalThreshold)
-  {
+void checkSignal() {
+  if (analogRead(dialPin) > signalThreshold) {
     signalStrength = 1;
   } else {
     signalStrength = 0;
   }
+}
+
+bool phone_loop() {
+  checkSignal();
+
 
   /*
   *  DIALING
   */
-  if ( signalStrength != signalStrengthStat )
-  {
+  if ( signalStrength != signalStrengthStat ) {
     signalStrengthStat = signalStrength;
     // on dial start one signal is send
-    if (signalStrength == HIGH)
-    {
+    if (signalStrength == HIGH) {
       dialing = true;
-      if (hungUp)
-      {
+      
+      if (hungUp) {
         // RECIEVER LIFTED
-        Serial.println("Reciever lifted");
         hungUp = false;
         timeOfSignal = millis();
+
+        finalNumber = "";
       }
     } 
 
     else if (signalStrength == LOW)
     {
       // CLATTER
-      Serial.println("CLATTER");
       timeOfSignal = millis();
       counter++;
     }
@@ -66,24 +64,17 @@ void loop()
 
   timeSinceLastChange = millis() - timeOfSignal;
 
-  if ( dialing == true )
-  {
+  if ( dialing == true ) {
     // finished dialing?
-    if ( timeSinceLastChange > clatterTimeout )
-    {
-      if (counter == 10)
-      {
+    if ( timeSinceLastChange > clatterTimeout ) {
+      if (counter == 10) {
         dialedNumber = 0;
-      } 
-      else if (counter > 0) {
+      }  else if (counter > 0) {
         dialedNumber = counter;
       }
-      if (dialedNumber < 10)
-      {
-        // DIALED NUMBER
-        Serial.print("dialed number ");
-        Serial.print(dialedNumber);
-        Serial.println();
+      
+      if (dialedNumber < 10) {
+        finalNumber += dialedNumber;
       }
 
       dialing = false;
@@ -92,12 +83,12 @@ void loop()
     }
   }
 
-  if ( signalStrength == LOW )
-  {
-    if ( timeSinceLastChange > finishedDialingTimeout && hungUp == false)
-    {
+  if ( signalStrength == LOW ) {
+    if ( timeSinceLastChange > finishedDialingTimeout && hungUp == false && finalNumber != "") {
       // HUNG UP
-      Serial.println("hungUp");
+      calledNumber(finalNumber);
+//      Serial.println("finalNumber: " + finalNumber);
+      
       hungUp = true;
       dialing = false;
       counter = 0;
@@ -105,6 +96,3 @@ void loop()
     }
   } 
 }
-
-
-
